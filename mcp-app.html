@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ms">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Threads Studio</title>
+    <style>
+      /* Cream and brown. Light: cream page, beige cards, coffee-brown accent. Dark: warm espresso-brown surfaces, beige accent.
+         No orange, no green, no black. Claude's own colours are used when the host provides them; the cards (--bg2) and the accent
+         are always ours, so the card never goes grey. Contrast checked: ink and muted on both surfaces >= 4.9:1, button text on the accent >= 7:1. */
+      :root {
+        --bg: var(--color-background-primary, #f8f3e8);
+        --bg2: #efe6d3;
+        --ink: var(--color-text-primary, #2e2218);
+        --muted: var(--color-text-secondary, #6e5f4d);
+        --line: var(--color-border-primary, #dccfb4);
+        --brand: #6f4e37;
+        --brand-ink: #fbf7ee;
+        --brand-text: #5c3d28;
+        --brand-soft: rgba(111, 78, 55, 0.13);
+        --accent: #a3202c;
+        --warn: #8a5a00;
+        --ok: #3f6a2e;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: var(--color-background-primary, #24201c);
+          --bg2: #322c26;
+          --ink: var(--color-text-primary, #f3ebdc);
+          --muted: var(--color-text-secondary, #bfb29b);
+          --line: var(--color-border-primary, #4d443a);
+          --brand: #d4b895;
+          --brand-ink: #2a2118;
+          --brand-text: #e3cfae;
+          --brand-soft: rgba(212, 184, 149, 0.16);
+          --accent: #f29a8f;
+          --warn: #e8b650;
+          --ok: #9ccf7a;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: var(--color-background-primary, #24201c); --bg2: #322c26;
+        --ink: var(--color-text-primary, #f3ebdc); --muted: var(--color-text-secondary, #bfb29b); --line: var(--color-border-primary, #4d443a);
+        --brand: #d4b895; --brand-ink: #2a2118; --brand-text: #e3cfae; --brand-soft: rgba(212, 184, 149, 0.16); --accent: #f29a8f; --warn: #e8b650; --ok: #9ccf7a;
+      }
+      :root[data-theme="light"] {
+        --bg: var(--color-background-primary, #f8f3e8); --bg2: #efe6d3;
+        --ink: var(--color-text-primary, #2e2218); --muted: var(--color-text-secondary, #6e5f4d); --line: var(--color-border-primary, #dccfb4);
+        --brand: #6f4e37; --brand-ink: #fbf7ee; --brand-text: #5c3d28; --brand-soft: rgba(111, 78, 55, 0.13); --accent: #a3202c; --warn: #8a5a00; --ok: #3f6a2e;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 10px 10px 16px; background: var(--bg); color: var(--ink); font: 14.5px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+      h1 { font-size: 16px; margin: 0 0 2px; }
+      h2 { font-size: 14px; margin: 0; }
+      h3 { font-size: 12px; margin: 16px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+      .sub { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+      .tabs { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg2); margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tabs button { flex: 1 0 auto; min-height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: 600 13.5px system-ui, sans-serif; cursor: pointer; white-space: nowrap; }
+      .tabs button[aria-selected="true"] { background: var(--brand); color: var(--brand-ink); }
+      button { min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 600 14px system-ui, sans-serif; cursor: pointer; }
+      button.go { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+      button.warn { border-color: var(--accent); color: var(--accent); }
+      button.armed { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button.small { min-height: 34px; padding: 0 10px; font-size: 13px; font-weight: 500; }
+      button:disabled { opacity: .5; cursor: default; }
+      button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+      .card { border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 10px; background: var(--bg2); }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .row.between { justify-content: space-between; }
+      .chip { display: inline-block; border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+      .chip.brand { background: var(--brand-soft); border-color: transparent; color: var(--brand-text); font-weight: 600; }
+      .chip.accent { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+      .hook { font-weight: 650; font-size: 15px; margin: 8px 0 6px; }
+      textarea { width: 100%; min-height: 84px; resize: vertical; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: 14.5px; line-height: 1.45; overflow: hidden; }
+      input[type=text], input[type=datetime-local], input[type=number] { min-height: 38px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; max-width: 100%; }
+      .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+      .count.over { color: var(--accent); font-weight: 700; }
+      .why { color: var(--muted); font-size: 13px; margin: 6px 0; }
+      .err { color: var(--accent); font-size: 13px; margin: 4px 0; }
+      .wrn { color: var(--warn); font-size: 13px; margin: 4px 0; }
+      .okmsg { color: var(--ok); font-size: 13px; font-weight: 600; margin-top: 6px; }
+      .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 8px; }
+      .kpis.four { grid-template-columns: repeat(4, 1fr); }
+      @media (max-width: 380px) { .kpis.four { grid-template-columns: repeat(2, 1fr); } }
+      .kpi { border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; background: var(--bg2); }
+      .kpi b { display: block; font-size: 21px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+      .kpi span { font-size: 12px; color: var(--muted); }
+      .meter { height: 10px; border-radius: 6px; background: var(--brand-soft); overflow: hidden; margin: 8px 0 4px; }
+      .meter i { display: block; height: 100%; background: var(--brand); border-radius: 6px; }
+      .days { display: flex; align-items: flex-end; gap: 2px; height: 64px; margin-top: 6px; }
+      .days div { flex: 1; min-width: 0; background: var(--brand-soft); border-radius: 3px 3px 0 0; position: relative; }
+      .days div.has { background: var(--brand); }
+      .days div.today { outline: 2px solid var(--accent); outline-offset: 1px; }
+      .axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 3px; }
+      .bar { display: grid; grid-template-columns: 84px 1fr 64px; gap: 8px; align-items: center; margin: 5px 0; font-size: 13px; }
+      .bar i { display: block; height: 11px; border-radius: 6px; background: var(--brand); }
+      .bar span:last-child { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+      .heat { display: grid; grid-template-columns: 34px repeat(8, 1fr); gap: 3px; font-size: 11px; }
+      .heat .h { color: var(--muted); text-align: center; align-self: center; }
+      .heat .c { aspect-ratio: 1.25; border-radius: 4px; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; color: var(--ink); font-variant-numeric: tabular-nums; }
+      .list-line { padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+      .list-line:last-child { border-bottom: 0; }
+      .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; margin: 4px 0 8px; color: var(--muted); font-size: 13.5px; cursor: pointer; }
+      .clamp.open { -webkit-line-clamp: unset; display: block; }
+      .quote { border-left: 3px solid var(--brand); padding: 4px 0 4px 10px; margin: 8px 0; white-space: pre-wrap; }
+      .quote mark { background: var(--brand-soft); color: var(--ink); padding: 0 2px; border-radius: 3px; font-weight: 650; }
+      ul.pts { margin: 4px 0 8px; padding-left: 18px; }
+      ul.pts li { margin: 3px 0; }
+      .note { margin-top: 10px; font-size: 12px; color: var(--muted); }
+      .pbox { margin: 10px 0 6px; padding: 10px; border: 2px dashed var(--line); border-radius: 12px; background: var(--bg); }
+      .pbox .phead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 14px; }
+      .pbox .phead span { font-size: 12px; color: var(--muted); }
+      textarea.pastebox { display: block; width: 100%; min-height: 46px; height: 46px; resize: none; overflow: hidden; margin-top: 8px; padding: 12px 10px; text-align: center; border: 2px dashed var(--line); background: var(--bg2); font-size: 13.5px; }
+      .dz textarea.pastebox { max-width: 340px; height: 58px; }
+      textarea.pastebox:focus { border-color: var(--brand); background: var(--brand-soft); outline: none; }
+      textarea.pastebox::placeholder { color: var(--muted); opacity: 1; }
+      .pbox .empty-pic { color: var(--muted); font-size: 13px; padding: 14px 4px; }
+      .rec.over .pbox { border-color: var(--brand); background: var(--brand-soft); }
+      .ver { margin: 14px 0 0; text-align: center; font-size: 11px; color: var(--muted); }
+      .dz { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 20px 12px; margin: 8px 0 12px; border: 2px dashed var(--line); border-radius: 14px; }
+      .dz.over, .rec.over { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 9%, transparent); }
+      .rec.over { outline: 2px dashed var(--brand); outline-offset: -2px; }
+      .empty { text-align: center; padding: 22px 8px; color: var(--muted); }
+      .edits { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+      .edits .n { flex: 1 1 100%; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+      .studio-home .row { gap: 8px; }
+      .empty button { margin-top: 10px; }
+      .slots { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+      .panel { border-top: 1px dashed var(--line); margin-top: 10px; padding-top: 10px; }
+      .thumbs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+      .thumb { position: relative; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+      .thumb img, .gitem img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .thumb button.x { position: absolute; top: 2px; right: 2px; min-height: 24px; min-width: 24px; width: 24px; padding: 0; border-radius: 12px; font-size: 13px; line-height: 1; background: var(--bg); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
+      .gitem { aspect-ratio: 1; min-height: 0; min-width: 0; padding: 0; border-radius: 10px; overflow: hidden; border: 3px solid transparent; }
+      .gitem.sel { border-color: var(--brand); }
+      .prow { display: grid; grid-template-columns: 72px 1fr auto; gap: 10px; align-items: center; padding: 8px; }
+      .prow img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; }
+      .prow .n { overflow-wrap: anywhere; font-size: 13.5px; }
+      .queue { display: block; }
+      label.lbl { display: block; font-size: 12px; color: var(--muted); margin: 6px 0 3px; }
+    </style>
+  </head>
+  <body>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div id="root"><p class="sub">Memuatkan...</p></div>
+    <p class="ver" id="ver">Versi kad 9 · krim dan coklat (cerah), beige atas coklat (gelap)</p>
+    <script type="module" src="/src/ui/mcp-app.ts"></script>
+  </body>
+</html>

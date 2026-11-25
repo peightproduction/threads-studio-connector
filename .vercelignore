@@ -1,0 +1,7 @@
+.env
+.env.local
+.data
+preview
+tests
+dist
+node_modules
