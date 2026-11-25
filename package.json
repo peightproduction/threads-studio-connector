@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Claude connector (MCP App) for your own Threads account: tracker, Studio tab, drafts and schedule, photo bank, winners and analytics through Meta's Threads API.",
+  "description": "Claude connector (MCP App) for your own Threads account: tracker, Studio tab, drafts and schedule, photo bank, winners and analytics, through Zernio (one API key) or Meta's Threads API.",
   "engines": {
     "node": ">=22"
   },

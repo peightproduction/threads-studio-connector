@@ -4,6 +4,16 @@ Connector untuk **Claude** yang bercakap terus dengan akaun Threads awak melalui
 
 *A Claude connector for your own Threads account, through Meta's official Threads API. Each person runs their own copy: nobody else holds your token or your data.*
 
+## Dua cara sambung ke Threads
+| | **Zernio** (lebih mudah) | **Meta terus** |
+|---|---|---|
+| Apa awak perlukan | Akaun Zernio (percuma untuk 2 akaun pertama), kunci API, dan Threads yang dah disambung dalam Zernio melalui akaun Instagram **Business atau Creator** | App Meta, jemputan Threads Tester, tiga alamat callback |
+| Tetapan Vercel | `ZERNIO_API_KEY`, `MCP_TOKEN`, `TICK_TOKEN` | `THREADS_APP_ID`, `THREADS_APP_SECRET`, `MCP_TOKEN`, `TICK_TOKEN` |
+| Nombor (views, suka, komen) | Perlukan add-on analitik Zernio | Termasuk |
+| Sambung dalam Claude | `sambung Threads` (tiada pautan Allow) | `sambung Threads` dan tekan Allow di Meta |
+
+Kalau `ZERNIO_API_KEY` diset, connector guna Zernio; kalau tidak, ia guna Meta. Semua kad, draf, jadual dan bank gambar sama pada kedua-duanya. Dengan Zernio, Zernio yang pegang sambungan ke akaun Threads awak.
+
 ## Apa yang awak dapat
 - **Tracker**: post hari ni lawan sasaran, minggu, bulan, streak, 30 hari, dan queue.
 - **Tab Studio**: ruang kerja awak. Claude tulis post, thread atau poster **hanya bila awak minta**. Ada kad kosong untuk tulis sendiri, dan butang Poster Canva.

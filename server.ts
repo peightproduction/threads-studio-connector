@@ -47,7 +47,7 @@ app.get("/setup", async (_req, res) => {
   const timerOk = Boolean(lastPing) && Date.now() - Date.parse(lastPing!) < 11 * 60_000;
   type Row = { label: string; ok: boolean; optional?: boolean; fix: string };
   const rows: Row[] = [
-    { label: "Meta: Threads App ID dan Threads App secret ada di Vercel", ok: threads.appConfigured(), fix: "Vercel > projek awak > Settings > Environment Variables: tambah THREADS_APP_ID dan THREADS_APP_SECRET (daripada Meta), kemudian Redeploy." },
+    { label: threads.zernio() ? "Zernio: ZERNIO_API_KEY ada di Vercel" : "Meta: Threads App ID dan Threads App secret ada di Vercel", ok: threads.appConfigured(), fix: "Vercel > projek awak > Settings > Environment Variables: tambah THREADS_APP_ID dan THREADS_APP_SECRET (daripada Meta), kemudian Redeploy." },
     { label: "MCP_TOKEN ada (kata laluan connector, 24 aksara atau lebih)", ok: tokenOk, fix: "Vercel > Settings > Environment Variables: tambah MCP_TOKEN (rentetan panjang rawak), kemudian Redeploy." },
     { label: "TICK_TOKEN ada (kata laluan pemasa, 24 aksara atau lebih, lain daripada MCP_TOKEN)", ok: tickToken.length >= 24, fix: "Vercel > Settings > Environment Variables: tambah TICK_TOKEN (rentetan panjang rawak yang lain), kemudian Redeploy." },
     { label: "Redis disambung (simpan token Threads, draf dan jadual)", ok: durable(), fix: "Vercel > projek awak > Storage > Create Database > Upstash Redis > sambung pada projek, kemudian Redeploy." },
@@ -55,6 +55,11 @@ app.get("/setup", async (_req, res) => {
     { label: "Pemasa berjalan (jadual post keluar ikut masa)", ok: timerOk, optional: true, fix: "Cron-job.org: buat cronjob yang melawat alamat /tick/<TICK_TOKEN> setiap 5 minit." },
     { label: "Storan gambar (Vercel Blob, public)", ok: blobConfigured(), optional: true, fix: "Vercel > Storage > Create Database > Blob (pilih Public), sambung pada projek, kemudian Redeploy." },
   ];
+  if (threads.zernio()) {
+    rows[0].fix = "Vercel > projek awak > Settings > Environment Variables: tambah ZERNIO_API_KEY (Zernio > Settings > API keys), kemudian Redeploy.";
+    const rt = rows.find((r) => r.label === "Threads disambung");
+    if (rt) rt.fix = "Pastikan akaun Threads dah disambung dalam Zernio (zernio.com, Connections, Threads). Kemudian dalam Claude, tulis: sambung Threads.";
+  }
   const next = rows.find((r) => !r.ok && !r.optional);
   const li = (r: Row) => `<li><b>${r.ok ? "✔" : r.optional ? "○" : "✘"}</b> ${esc(r.label)}${r.ok ? "" : `<br><small>${r.optional ? "Pilihan. " : ""}${esc(r.fix)}</small>`}</li>`;
   const code = (s: string) => `<code style="display:block;word-break:break-all;background:#f3ece0;padding:.4rem .6rem;border-radius:6px;margin:.2rem 0 .7rem">${esc(s)}</code>`;
@@ -64,11 +69,11 @@ app.get("/setup", async (_req, res) => {
 <p>${local ? "Ini masih berjalan di komputer, bukan di Vercel. Alamat di bawah belum betul." : "Alamat connector awak: " + esc(base)}</p>
 <ul style="list-style:none;padding:0">${rows.map(li).join("")}</ul>
 <p><b>${next ? "Langkah seterusnya: " + esc(next.fix) : "Semua yang wajib dah siap."}</b></p>
-<h2 style="font-size:1.05rem;margin-top:1.6rem">Isi dalam Meta (tetapan Threads API)</h2>
+${threads.zernio() ? "<!--" : ""}<h2 style="font-size:1.05rem;margin-top:1.6rem">Isi dalam Meta (tetapan Threads API)</h2>
 <p><small>Nama kotak boleh berbeza sedikit. Salin alamat tepat seperti di bawah.</small></p>
 <div>Redirect Callback URL (atau Valid OAuth Redirect URIs)</div>${code(threads.redirectUri())}
 <div>Uninstall Callback URL (atau Deauthorize callback URL)</div>${code(`${base}/oauth/deauthorize`)}
-<div>Delete Callback URL (atau Data Deletion Requests URL)</div>${code(`${base}/oauth/delete`)}
+<div>Delete Callback URL (atau Data Deletion Requests URL)</div>${code(`${base}/oauth/delete`)}${threads.zernio() ? "-->" : ""}
 <h2 style="font-size:1.05rem;margin-top:1.6rem">Alamat untuk Claude (Add custom connector)</h2>
 ${code(`${base}/mcp/<MCP_TOKEN awak>`)}<p><small>Ganti &lt;MCP_TOKEN awak&gt; dengan nilai MCP_TOKEN yang awak letak di Vercel. Anggap alamat penuh itu kata laluan.</small></p>
 </body></html>`);

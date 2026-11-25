@@ -15,6 +15,7 @@ import { duplicateOf, findByRef, freshen, fromQueue, invalidate, loadPosts } fro
 import { maybeTick, newQueueItem, runItem } from "./scheduler.js";
 import { backend, durable, load, storageLatencyMs, update } from "./store.js";
 import * as threads from "./threads.js";
+import * as zernio from "./zernio.js";
 import { StudioError, type Photo, type Post, type QueueItem, type State } from "./types.js";
 import { UI_HTML } from "./ui-html.generated.js";
 
@@ -718,15 +719,16 @@ export function buildServer(): McpServer {
     {
       title: "Sambung / semak Threads",
       description:
-        "Check whether the owner's Threads account is connected, and give the one-time link to connect it (or reconnect) through Meta. Also reports how many posts were read, how many have numbers, and whether the scheduler pinger is running. Call this when other tools say Threads is not connected, or for 'semak sambungan'.",
-      inputSchema: { reconnect: z.boolean().optional().describe("true to get a new connect link even if already connected") },
+        "Check whether the owner's Threads account is connected, and give the one-time link to connect it (or reconnect) through Meta. When the connector runs on Zernio (ZERNIO_API_KEY is set) there is no link: it links the Threads account that is already connected inside Zernio (pass username when Zernio has several). Also reports how many posts were read, how many have numbers, and whether the scheduler pinger is running. Call this when other tools say Threads is not connected, or for 'semak sambungan'.",
+      inputSchema: { reconnect: z.boolean().optional().describe("true to get a new connect link even if already connected"), username: z.string().optional().describe("Zernio mode: which Threads account to use when Zernio has several, e.g. @name") },
       annotations: { readOnlyHint: false, openWorldHint: true },
     },
-    async ({ reconnect }) => guard(async () => {
+    async ({ reconnect, username }) => guard(async () => {
       const now = new Date();
       const state = await load();
+      if (threads.zernio() && (reconnect || username || !(await threads.connected()))) await zernio.connect(username, now);
       const isConnected = await threads.connected();
-      const info: Record<string, unknown> = { connected: isConnected, app_configured: threads.appConfigured(), storage: backend(), card_version: CARD_VERSION, permissions_asked_on_connect: threads.SCOPES.split(",") };
+      const info: Record<string, unknown> = { connected: isConnected, app_configured: threads.appConfigured(), storage: backend(), card_version: CARD_VERSION, permissions_asked_on_connect: threads.zernio() ? [] : threads.SCOPES.split(","), backend: threads.zernio() ? "zernio" : "meta" };
       if (isConnected) {
         try {
           const token = await threads.accessToken(now);
@@ -734,7 +736,7 @@ export function buildServer(): McpServer {
           const { posts, notes } = await loadPosts({ force: true });
           const pub = posts.filter((p) => p.status === "published");
           info.username = who.username;
-          info.token_expires = state.threads?.expiresAt ?? "tak diketahui (token dari env)";
+          info.token_expires = threads.zernio() ? "tiada tarikh luput (kunci API Zernio)" : state.threads?.expiresAt ?? "tak diketahui (token dari env)";
           info.posts_read = pub.length;
           info.posts_with_numbers = pub.filter((p) => p.metricsKnown).length;
           info.followers = (await threads.followers(token)) ?? null;
@@ -748,7 +750,9 @@ export function buildServer(): McpServer {
       info.scheduler_minutes_since_ping = pingAgo ?? null;
       const waiting = Object.values(state.queue).filter((q) => q.status === "scheduled");
       if (waiting.length && !info.scheduler_running) info.scheduler_warning = `${waiting.length} post dijadual tetapi pemasa tak berjalan, jadi ia TAK akan keluar ikut masa (hanya bila pemilik guna Claude selepas masanya, dan paling lewat 3 jam). Pasang pemasa: buka halaman /setup.`;
-      if (!info.connected || reconnect) {
+      if (threads.zernio()) {
+        if (!info.connected) info.fix = "Semak ZERNIO_API_KEY di Vercel dan pastikan akaun Threads dah disambung dalam Zernio (zernio.com, Connections, Threads), kemudian panggil connect_threads semula.";
+      } else if (!info.connected || reconnect) {
         if (!threads.appConfigured()) return fail("THREADS_APP_ID dan THREADS_APP_SECRET belum diset di Vercel (buka halaman /setup pada alamat connector awak untuk semak).");
         const nonce = randomBytes(18).toString("hex");
         await update((s) => { s.nonces[nonce] = new Date(now.getTime() + 10 * 60_000).toISOString(); });

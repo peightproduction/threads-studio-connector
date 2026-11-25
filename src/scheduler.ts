@@ -34,7 +34,7 @@ export async function runItem(id: string, now: Date): Promise<QueueItem> {
   if (!item) throw new Error("queue item missing");
   try {
     const token = await threads.accessToken(now);
-    const res = await threads.publish(token, item.parts, { mediaUrls: item.mediaUrls, topic: item.topic });
+    const res = await threads.publish(token, item.parts, { mediaUrls: item.mediaUrls, topic: item.topic, idempotencyKey: item.id });
     return await update((s) => {
       const q = s.queue[id];
       q.status = "published"; q.threadsId = res.id; q.url = res.url; q.publishedAt = now.toISOString();
