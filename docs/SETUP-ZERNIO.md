@@ -55,7 +55,7 @@ If the link does not open or Vercel says it cannot find the repository, use the 
    - `MCP_TOKEN`
    - `TICK_TOKEN`
    If the names are not pre-listed, press **Add More** and type each name and value. They do NOT need THREADS_APP_ID or THREADS_APP_SECRET (those are for the Meta route). Wait 1 to 2 minutes for the success page.
-11. Ask for their domain: on the project page under **Domains** (or the big preview link), the address ending in `.vercel.app`, for example `threads-studio-ab12.vercel.app`. It is not secret. Ask them to tell you just that.
+11. Ask for their domain: on the project page under **Domains** (or the big preview link), the address ending in `.vercel.app`, for example `threads-studio-ab12.vercel.app`. It is not secret. Ask them to tell you just that. Use this short domain everywhere, never the long deployment address with their username in it (Vercel locks that one). Then: **Settings**, **Deployment Protection**, check **Vercel Authentication** is off (switch it off and **Save** if it is on); otherwise Claude cannot reach the connector.
 12. Ask them to open `https://<domain>/setup`. **Check:** the first three items (ZERNIO_API_KEY, MCP_TOKEN, TICK_TOKEN) are ticked; Redis is not yet. If the first line talks about Meta instead of Zernio, ZERNIO_API_KEY is missing or misspelled in Vercel: fix the name and redeploy. If Vercel's build failed, ask for a screenshot of the error.
 
 ## Stage D: Redis (steps 13 to 15)
@@ -90,6 +90,7 @@ End this chat after step 19 with: "From now on use the new chat; the connector b
 - **`/setup` talks about Meta, not Zernio:** ZERNIO_API_KEY is missing or misspelled in Vercel. Fix and redeploy.
 - **`/setup` shows Redis missing after step 13:** redeploy (step 14); check the database is connected to this project.
 - **Claude says the connector is not found, or 404 at the address:** the MCP_TOKEN in the connector address is not exactly the one in Vercel. A connector's address cannot be edited in Claude: remove it and add it again with the right address; or change `MCP_TOKEN` in Vercel and redeploy.
+- **Claude says "Couldn't register with ...'s sign-in service" (or asks for an OAuth client ID):** Vercel is locking the address, so Claude thinks it needs a sign-in. They used the long deployment address (with their username in it) instead of the short production domain under **Domains**, or Vercel Authentication is on. Fix: Vercel project, **Settings**, **Deployment Protection**, switch **Vercel Authentication** off, **Save**; then remove the connector in Claude and add it again with `https://<short-domain>/mcp/<MCP_TOKEN>`, Authentication **No sign in**, no client ID.
 - **Numbers are always empty:** Zernio's analytics add-on is not on. Posting and scheduling still work.
 - **A live post will not delete:** Zernio may refuse to delete published posts; delete it in the Threads app.
 - **Vercel build failed:** ask for the error text; a common cause is a missing environment variable.
